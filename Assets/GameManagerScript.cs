@@ -50,6 +50,7 @@ public class GameManagerScript : MonoBehaviour
 
     // クリア状態を追跡するフラグ
     bool isCleared = false;
+    bool isLastStage = false;
 
     //=============================================================
     // ステージ切り替えを行う関数
@@ -166,7 +167,7 @@ public class GameManagerScript : MonoBehaviour
 
         playerMoveSE.Play();
 
-        if (map[moveTo.y, moveTo.x] == 3)
+        if (map[moveTo.y, moveTo.x] == 3 && field[moveTo.y, moveTo.x].tag == "Box")
         {
             boxPlaceSE.Play();
         }
@@ -321,7 +322,7 @@ public class GameManagerScript : MonoBehaviour
                         break;
                     }
 
-                   target[targetNum] = Instantiate(targetPrefab, position, Quaternion.identity);
+                    target[targetNum] = Instantiate(targetPrefab, position, Quaternion.LookRotation(new Vector3(90.0f, 0.0f, 0.0f)));
 
                 }
             }
@@ -371,11 +372,11 @@ public class GameManagerScript : MonoBehaviour
         map2 = new int[,]
         {
            {4,4,4,4,4,4,4,4,4 },
-           {4,3,2,0,0,0,0,0,4 },
-           {4,3,2,0,0,0,0,0,4 },
-           {4,3,2,1,0,0,0,0,4 },
            {4,0,0,0,0,0,0,0,4 },
-           {4,0,0,0,0,0,0,0,4 },
+           {4,0,0,3,2,0,2,0,4 },
+           {4,0,0,0,0,2,3,0,4 },
+           {4,0,1,0,0,0,0,0,4 },
+           {4,0,3,0,0,0,0,0,4 },
            {4,4,4,4,4,4,4,4,4 }
         };
 
@@ -383,12 +384,12 @@ public class GameManagerScript : MonoBehaviour
         map3 = new int[,]
         {
            {4,4,4,4,4,4,4,4,4,4 },
-           {4,3,2,0,0,0,0,0,0,4 },
-           {4,3,2,0,0,0,0,0,0,4 },
-           {4,3,2,1,0,0,0,0,0,4 },
            {4,0,0,0,0,0,0,0,0,4 },
-           {4,0,0,0,0,0,0,0,0,4 },
-           {4,0,0,0,0,0,0,0,0,4 },
+           {4,0,3,0,2,0,0,3,0,4 },
+           {4,0,0,1,4,4,0,0,0,4 },
+           {4,0,0,0,0,2,2,0,0,4 },
+           {4,4,3,0,0,0,0,0,0,4 },
+           {4,0,4,0,0,4,4,0,4,4 },
            {4,4,4,4,4,4,4,4,4,4 }
         };
 
@@ -455,6 +456,15 @@ public class GameManagerScript : MonoBehaviour
             }
         }
 
+        if (!isLastStage)
+        {
+            // Rキーでリセット
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                Reset();
+            }
+        }
+
         for (int y = 0; y < map.GetLength(0); y++)
         {
             for (int x = 0; x < map.GetLength(1); x++)
@@ -466,20 +476,11 @@ public class GameManagerScript : MonoBehaviour
             }
         }
 
-        // Rキーでリセット
-        if (Input.GetKeyDown(KeyCode.R))
-        {
-            Reset();
-        }
-
         // クリア判定
         if (IsCleard() && !isCleared)
         {
             // クリア状態に設定
             isCleared = true;
-
-            // ゲームオブジェクトのSetActiveメソッドを使い有効化
-            clearText.SetActive(true);
 
             // クリアの音
             clearSE.Play();
@@ -490,9 +491,6 @@ public class GameManagerScript : MonoBehaviour
 
             // クリア状態に設定
             isCleared = true;
-
-            // ゲームオブジェクトのSetActiveメソッドを使い有効化
-            clearText.SetActive(true);
 
             // クリアの音
             clearSE.Play();
@@ -517,6 +515,18 @@ public class GameManagerScript : MonoBehaviour
 
             // Text以外のオブジェクトを非表示にする
             SetOtherObjectsActive(false);
+
+            isLastStage = true;
+        }
+
+        if (isLastStage)
+        {
+            // 最初から
+            if (Input.GetKeyDown(KeyCode.Return))
+            {
+                currentStage = 1;
+                Reset();
+            }
         }
     }
 }
