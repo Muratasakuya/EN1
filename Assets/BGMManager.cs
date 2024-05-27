@@ -16,6 +16,7 @@ public class BGMManager : MonoBehaviour
             bgmSource.Play();
         }
     }
+
     public void PlayBGM()
     {
         if (bgmSource != null && !bgmSource.isPlaying)
