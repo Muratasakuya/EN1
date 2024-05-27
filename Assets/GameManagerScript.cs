@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class GameManagerScript : MonoBehaviour
 {
@@ -16,7 +18,6 @@ public class GameManagerScript : MonoBehaviour
     // 追加
     public GameObject playerPrefab;
     public GameObject boxPrefab;
-    public GameObject goalPrefab;
     public GameObject targetPrefab;
     public GameObject clearText;
     public GameObject particlePrefab;
@@ -29,15 +30,64 @@ public class GameManagerScript : MonoBehaviour
 
     // レベルデザイン用の配列
     int[,] map;
+    int[,] map1;
+    int[,] map2;
+    int[,] map3;
+
+    // 現在のシーン
+    int currentStage = 1;
+
+    // ターゲットの数
+    int targetIndex = 0;
+
     // ゲーム管理用の配列
     GameObject[,] field;
+    GameObject[] target;
 
     GameObject playerObj;
+
+    List<GameObject> allObj = new List<GameObject>();
 
     // クリア状態を追跡するフラグ
     bool isCleared = false;
 
+    //=============================================================
+    // ステージ切り替えを行う関数
+    //=============================================================
+    void SwitchStage(int stage)
+    {
 
+        // ステージに応じてマップを切り替える
+        switch (stage)
+        {
+            /*===============================================*/
+            // ステージ1
+            case 1:
+
+                map = map1;
+
+                break;
+            /*===============================================*/
+            // ステージ2
+            case 2:
+
+                map = map2;
+
+                break;
+            /*===============================================*/
+            // ステージ3
+            case 3:
+
+                map = map3;
+
+                break;
+        }
+
+        field = new GameObject[map.GetLength(0), map.GetLength(1)];
+
+        // 新しいステージを初期化
+        InitializeField();
+    }
 
     //=============================================================
     // 要素が見つからなかったときに-1を代入する関数
@@ -66,7 +116,7 @@ public class GameManagerScript : MonoBehaviour
     //=============================================================
     bool MoveNumber(Vector2Int moveFrom, Vector2Int moveTo)
     {
-       if (moveTo.y < 0 || moveTo.y >= field.GetLength(0)) { return false; }
+        if (moveTo.y < 0 || moveTo.y >= field.GetLength(0)) { return false; }
         if (moveTo.x < 0 || moveTo.x >= field.GetLength(1)) { return false; }
 
         if (field[moveTo.y, moveTo.x] != null && field[moveTo.y, moveTo.x].tag == "Wall")
@@ -154,7 +204,7 @@ public class GameManagerScript : MonoBehaviour
 
         for (int y = 0; y < map.GetLength(0); y++)
         {
-            for (int x = 0; x < map.GetLength(0); x++)
+            for (int x = 0; x < map.GetLength(1); x++)
             {
                 // 格納場所か否かを判断
                 if (map[y, x] == 3)
@@ -185,6 +235,11 @@ public class GameManagerScript : MonoBehaviour
     //=============================================================
     void Reset()
     {
+
+        allObj.Clear();
+
+        SetOtherObjectsActive(false);
+
         // 現在のオブジェクトを削除する
         for (int y = 0; y < field.GetLength(0); y++)
         {
@@ -198,10 +253,12 @@ public class GameManagerScript : MonoBehaviour
             }
         }
 
-        InitializeField();
+        for (int i = 0; i < targetIndex; i++)
+        {
+            Destroy(target[i]);
+        }
 
-        // クリアテキストを非表示にする
-        clearText.SetActive(false);
+        SwitchStage(currentStage);
 
         // クリア状態をリセット
         isCleared = false;
@@ -212,6 +269,12 @@ public class GameManagerScript : MonoBehaviour
     //=============================================================
     void InitializeField()
     {
+
+        for (int i = 0; i < targetIndex; i++)
+        {
+            Destroy(target[i]);
+        }
+
         Vector3 offset = new Vector3(map.GetLength(1) / 2f - 0.5f, -(map.GetLength(0) / 2f - 0.5f), 0);
 
         for (int y = 0; y < map.GetLength(0); y++)
@@ -230,7 +293,8 @@ public class GameManagerScript : MonoBehaviour
                 }
                 if (map[y, x] == 3)
                 {
-                    field[y, x] = Instantiate(targetPrefab, position + new Vector3(0, 0, 0.01f), Quaternion.identity);
+
+                    targetIndex++;
                 }
                 if (map[y, x] == 4)
                 {
@@ -238,6 +302,32 @@ public class GameManagerScript : MonoBehaviour
                 }
             }
         }
+
+        target = new GameObject[targetIndex];
+        int targetNum = targetIndex;
+
+        for (int y = 0; y < map.GetLength(0); y++)
+        {
+            for (int x = 0; x < map.GetLength(1); x++)
+            {
+                if (map[y, x] == 3)
+                {
+
+                    Vector3 position = new Vector3(x, -y, 0) - offset;
+
+                    targetNum--;
+                    if (targetNum < 0)
+                    {
+                        break;
+                    }
+
+                   target[targetNum] = Instantiate(targetPrefab, position, Quaternion.identity);
+
+                }
+            }
+        }
+
+        clearText.SetActive(false);
     }
 
     //=============================================================
@@ -245,17 +335,16 @@ public class GameManagerScript : MonoBehaviour
     //=============================================================
     void SetOtherObjectsActive(bool active)
     {
-        // プレイヤー、ボックス、目標、壁などのオブジェクトをループして非表示にする
-        for (int y = 0; y < field.GetLength(0); y++)
+
+        for (int i = 0; i < targetIndex; i++)
         {
-            for (int x = 0; x < field.GetLength(1); x++)
-            {
-                // field[y, x] がnullでない場合と、tagが"Text"でない場合に非表示にする
-                if (field[y, x] != null && field[y, x].tag != "Text")
-                {
-                    field[y, x].SetActive(active);
-                }
-            }
+            Destroy(target[i]);
+        }
+
+        foreach (GameObject obj in allObj)
+        {
+
+            Destroy(obj);
         }
     }
 
@@ -267,7 +356,8 @@ public class GameManagerScript : MonoBehaviour
         Screen.SetResolution(1280, 720, false);
 
         // 配列の実態の作成と初期化
-        map = new int[,]
+        // ステージ1
+        map1 = new int[,]
         {
            {4,4,4,4,4,4,4 },
            {4,3,2,0,0,0,4 },
@@ -277,32 +367,38 @@ public class GameManagerScript : MonoBehaviour
            {4,4,4,4,4,4,4 }
         };
 
-        field = new GameObject[map.GetLength(0), map.GetLength(1)];
+        // ステージ2
+        map2 = new int[,]
+        {
+           {4,4,4,4,4,4,4,4,4 },
+           {4,3,2,0,0,0,0,0,4 },
+           {4,3,2,0,0,0,0,0,4 },
+           {4,3,2,1,0,0,0,0,4 },
+           {4,0,0,0,0,0,0,0,4 },
+           {4,0,0,0,0,0,0,0,4 },
+           {4,4,4,4,4,4,4,4,4 }
+        };
 
-        InitializeField();
+        // ステージ3
+        map3 = new int[,]
+        {
+           {4,4,4,4,4,4,4,4,4,4 },
+           {4,3,2,0,0,0,0,0,0,4 },
+           {4,3,2,0,0,0,0,0,0,4 },
+           {4,3,2,1,0,0,0,0,0,4 },
+           {4,0,0,0,0,0,0,0,0,4 },
+           {4,0,0,0,0,0,0,0,0,4 },
+           {4,0,0,0,0,0,0,0,0,4 },
+           {4,4,4,4,4,4,4,4,4,4 }
+        };
 
-        clearText.SetActive(false);
+        // ステージ1を初期化
+        SwitchStage(1);
     }
 
     // Update is called once per frame
     void Update()
     {
-
-        // クリア判定
-        if (IsCleard() && !isCleared)
-        {
-            // クリア状態に設定
-            isCleared = true;
-
-            // ゲームオブジェクトのSetActiveメソッドを使い有効化
-            clearText.SetActive(true);
-
-            // クリアの音
-            clearSE.Play();
-
-            // Text以外のオブジェクトを非表示にする
-            SetOtherObjectsActive(false);
-        }
 
         if (!IsCleard())
         {
@@ -359,10 +455,68 @@ public class GameManagerScript : MonoBehaviour
             }
         }
 
+        for (int y = 0; y < map.GetLength(0); y++)
+        {
+            for (int x = 0; x < map.GetLength(1); x++)
+            {
+                if (field[y, x] != null)
+                {
+                    allObj.Add(field[y, x]);
+                }
+            }
+        }
+
         // Rキーでリセット
         if (Input.GetKeyDown(KeyCode.R))
         {
             Reset();
+        }
+
+        // クリア判定
+        if (IsCleard() && !isCleared)
+        {
+            // クリア状態に設定
+            isCleared = true;
+
+            // ゲームオブジェクトのSetActiveメソッドを使い有効化
+            clearText.SetActive(true);
+
+            // クリアの音
+            clearSE.Play();
+        }
+
+        else if (currentStage < 3 && IsCleard() && isCleared)
+        {
+
+            // クリア状態に設定
+            isCleared = true;
+
+            // ゲームオブジェクトのSetActiveメソッドを使い有効化
+            clearText.SetActive(true);
+
+            // クリアの音
+            clearSE.Play();
+
+            // Text以外のオブジェクトを非表示にする
+            SetOtherObjectsActive(false);
+
+            // ステージクリア時の処理
+            currentStage++;
+            SwitchStage(currentStage);
+        }
+        else if (currentStage == 3 && IsCleard() && isCleared)
+        {
+            // クリア状態に設定
+            isCleared = true;
+
+            // ゲームオブジェクトのSetActiveメソッドを使い有効化
+            clearText.SetActive(true);
+
+            // クリアの音
+            clearSE.Play();
+
+            // Text以外のオブジェクトを非表示にする
+            SetOtherObjectsActive(false);
         }
     }
 }
